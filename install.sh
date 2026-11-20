@@ -120,6 +120,7 @@ check_host() {
   command -v pct >/dev/null || die "No pct here: run this in the Proxmox VE host shell, not in a container."
   version=$(pveversion)
   [[ $version =~ ^pve-manager/(8|9)\. ]] || die "Proxmox VE 8.x or 9.x needed; this host has: $version"
+  [[ $(uname -m) == x86_64 ]] || die "An x86_64 (amd64) host is needed: the nice-finance image is amd64 only; this host is $(uname -m)."
 }
 
 take_lock() {
@@ -233,16 +234,17 @@ choose_storage() {
   done
 }
 
-# Prints the newest debian-N-standard template name.
+# Prints the newest amd64 debian-N-standard template name. pveam also lists
+# arm64 ones, which do not start on an x86_64 host ("Exec format error").
 newest_template() {
   local name newest
   pveam update >&2 || die "pveam update failed (no internet on the host?)."
   newest=$(pveam available --section system | while read -r _ name; do
-    if [[ $name =~ ^debian-[0-9]+-standard_ ]]; then
+    if [[ $name =~ ^debian-[0-9]+-standard_.*_amd64\.tar\. ]]; then
       printf '%s\n' "$name"
     fi
   done | sort -V | tail -n 1)
-  [[ -n $newest ]] || die "No debian-*-standard template in pveam available."
+  [[ -n $newest ]] || die "No amd64 debian-*-standard template in pveam available."
   printf '%s' "$newest"
 }
 
